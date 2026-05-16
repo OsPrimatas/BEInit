@@ -1,1 +1,6 @@
-/target
+target/
+
+.vs/
+.vscode/
+.idea/
+.cursor/

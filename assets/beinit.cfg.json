@@ -1,0 +1,16 @@
+{
+  "frontend_path": "./frontend",
+  "backend_path": "./backend",
+
+  "php": {
+    "version": "8.5",
+    "port": 8080,
+    "display_errors": true
+  },
+
+  "mariadb": {
+    "version": "11.8.6",
+    "port": 3306,
+    "data_dir": "./.beinit/db_data"
+  }
+}

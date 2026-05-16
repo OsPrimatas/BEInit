@@ -1,0 +1,5 @@
+{
+  "mariadb_user": "admin",
+  "mariadb_password": "admin",
+  "mariadb_database": "my_db"
+}
