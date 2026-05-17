@@ -5,7 +5,7 @@ use crate::download_manager::bun_download;
 use crate::download_manager::composer_download;
 use crate::download_manager::mariadb_download;
 use crate::download_manager::php_download;
-use crate::project_manager::read_cfg::load_configs;
+use crate::project_manager::read_cfg::{load_configs, load_db_config};
 use crate::project_manager::service_manager;
 use crate::utils::beinit_paths::BEInitPaths;
 
@@ -72,16 +72,50 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
             println!("✨ Instalação concluída com sucesso!");
         }
         Commands::Run => {
-            println!("▶️  Iniciando serviços...");
             let config = load_configs()?;
+            let db = load_db_config()?;
             let paths = BEInitPaths::new();
 
-            let _services = service_manager::start_all(&config, &paths).await?;
+            let _services = service_manager::start_all(&config, &db, &paths).await?;
 
-            println!("✅ Todos os serviços iniciados!");
-            println!("🌐 PHP       -> http://localhost:{}", config.php.port);
-            println!("🗄️  MariaDB   -> porta {}", config.mariadb.port);
-            println!("⚡ Bun       -> frontend dev server");
+            println!("");
+            println!("╔══════════════════════════════════════════════════════╗");
+            println!("║             SERVIÇOS INICIADOS COM SUCESSO           ║");
+            println!("╠══════════════════════════════════════════════════════╣");
+            println!("║      PHP Dev Server                                  ║");
+            println!(
+                "║      URL:   http://localhost:{}                      ║",
+                config.php.port
+            );
+            println!("╠══════════════════════════════════════════════════════╣");
+            println!("║      MariaDB                                         ║");
+            println!("║      Host:      localhost                            ║");
+            println!(
+                "║      Porta:     {}                                   ║",
+                config.mariadb.port
+            );
+            println!(
+                "║      Banco:     {}                                   ║",
+                db.database
+            );
+            println!(
+                "║      Usuário:   {}                                   ║",
+                db.user
+            );
+            println!(
+                "║      Senha:     {}                                   ║",
+                db.password
+            );
+            println!(
+                "║      URL JDBC:  jdbc:mariadb://localhost:{}/{}       ║",
+                config.mariadb.port, db.database
+            );
+            println!("╠══════════════════════════════════════════════════════╣");
+            println!("║      Bun  -  Frontend Dev Server                     ║");
+            println!("╚══════════════════════════════════════════════════════╝");
+            println!("");
+            println!("  Pressione Ctrl+C para parar todos os serviços.");
+            println!("");
 
             tokio::signal::ctrl_c().await?;
             println!("\n⏹️  Recebido Ctrl+C, parando serviços...");
@@ -116,8 +150,6 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
                 .find_executable(&composer_dir, "composer")
                 .expect("Composer não encontrado. Execute 'beinit install' primeiro.");
 
-            // We need PHP in the PATH or explicitly use it, but our composer.bat already calls php
-            // However, php might not be in PATH. Let's make sure it is in PATH.
             let php_dir = paths.ensure_version_dir("php", &config.php.version)?;
 
             let mut cmd = std::process::Command::new(composer_exe);
@@ -135,7 +167,7 @@ fn init_project() -> Result<(), Box<dyn Error>> {
 
     // Ler os templates embutidos
     let default_cfg = include_str!("../assets/beinit.cfg.json");
-    let default_env = include_str!("../assets/beinit.db.env");
+    let default_db_json = include_str!("../assets/beinit.db.json");
 
     // Se o arquivo cfg_path já existe, lê o que está no arquivo. Caso contrário, cria o default e usa.
     let cfg_content = if std::path::Path::new(cfg_path).exists() {
@@ -180,7 +212,7 @@ fn init_project() -> Result<(), Box<dyn Error>> {
     if add_gitignore {
         let gitignore_path = ".gitignore";
         let env_entry = format!("{}/.env", backend_path);
-        let db_env_entry = format!("{}/beinit.db.env", backend_path);
+        let db_json_entry = format!("{}/beinit.db.json", backend_path);
 
         if !std::path::Path::new(gitignore_path).exists() {
             let gitignore_content = format!(
@@ -203,12 +235,12 @@ fn init_project() -> Result<(), Box<dyn Error>> {
 {}
 {}
 "#,
-                frontend_path, frontend_path, frontend_path, backend_path, env_entry, db_env_entry
+                frontend_path, frontend_path, frontend_path, backend_path, env_entry, db_json_entry
             );
             std::fs::write(gitignore_path, gitignore_content)?;
             println!("✅ Arquivo .gitignore criado!");
         } else {
-            // Se já existe, garante que .env e beinit.db.env estão lá
+            // Se já existe, garante que .env e beinit.db.json estão lá
             let mut content = std::fs::read_to_string(gitignore_path)?;
             let mut modified = false;
 
@@ -219,11 +251,11 @@ fn init_project() -> Result<(), Box<dyn Error>> {
                 content.push_str(&format!("{}\n", env_entry));
                 modified = true;
             }
-            if !content.contains(&db_env_entry) {
+            if !content.contains(&db_json_entry) {
                 if !content.ends_with('\n') {
                     content.push('\n');
                 }
-                content.push_str(&format!("{}\n", db_env_entry));
+                content.push_str(&format!("{}\n", db_json_entry));
                 modified = true;
             }
 
@@ -234,18 +266,20 @@ fn init_project() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    // .env e beinit.db.env no backend
+    // .env no backend (arquivo genérico de variáveis de ambiente)
     if add_env {
         let env_path = format!("{}/.env", backend_path);
         if !std::path::Path::new(&env_path).exists() {
-            std::fs::write(&env_path, default_env)?;
+            let default_env_content = "# Variáveis de ambiente do backend\n# Configure suas chaves de API e outras variáveis aqui\n";
+            std::fs::write(&env_path, default_env_content)?;
             println!("✅ Arquivo .env criado em {}/", backend_path);
         }
 
-        let db_env_path = format!("{}/beinit.db.env", backend_path);
-        if !std::path::Path::new(&db_env_path).exists() {
-            std::fs::write(&db_env_path, default_env)?;
-            println!("✅ Arquivo beinit.db.env criado em {}/", backend_path);
+        // beinit.db.json no backend (credenciais do banco de dados)
+        let db_json_path = format!("{}/beinit.db.json", backend_path);
+        if !std::path::Path::new(&db_json_path).exists() {
+            std::fs::write(&db_json_path, default_db_json)?;
+            println!("✅ Arquivo beinit.db.json criado em {}/", backend_path);
         }
     }
 

@@ -19,14 +19,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!(
         "Extraindo arquivos em: {}...",
-        paths.get_beinit_path().display()
+        paths.get_beinit_tool_path().display()
     );
     let mut archive = zip::ZipArchive::new(content)?;
-    archive.extract(&paths.get_beinit_path())?;
+    archive.extract(&paths.get_beinit_tool_path())?;
 
     // 3. Configurar Variáveis de Ambiente
     println!("🔑 Configurando variáveis de ambiente...");
-    setup_env_variables(paths.get_beinit_path().to_str().unwrap())?;
+    setup_env_variables(paths.get_beinit_tool_path().to_str().unwrap())?;
 
     // Aguarda o usuário ler antes de fechar
     println!("\nPressione Enter para sair...");
@@ -41,16 +41,16 @@ fn setup_env_variables(path_value: &str) -> std::io::Result<()> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let (env, _) = hkcu.create_subkey("Environment")?;
 
-    // Criar a variável BEINIT
-    env.set_value("BEINIT", &path_value)?;
-    println!("✅ Variável %BEINIT% criada.");
+    // Criar a variável BEINIT_TOOL
+    env.set_value("BEINIT_TOOL", &path_value)?;
+    println!("Variável %BEINIT_TOOL% criada.");
 
-    // Inserir %BEINIT% no PATH (se não existir)
+    // Inserir %BEINIT_TOOL% no PATH (se não existir)
     let current_path: String = env.get_value("Path")?;
-    if !current_path.contains("%BEINIT%") {
-        let new_path = format!("{};%BEINIT%", current_path);
+    if !current_path.contains("%BEINIT_TOOL%") {
+        let new_path = format!("{};%BEINIT_TOOL%", current_path);
         env.set_value("Path", &new_path)?;
-        println!("✅ %BEINIT% adicionado ao PATH do usuário.");
+        println!("%BEINIT_TOOL% adicionado ao PATH do usuário.");
     }
 
     Ok(())

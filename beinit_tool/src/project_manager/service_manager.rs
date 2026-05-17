@@ -1,5 +1,5 @@
 use crate::utils::beinit_paths::BEInitPaths;
-use crate::utils::beinit_props::{BEInitProps, MariaDbProps, PhpProps};
+use crate::utils::beinit_props::{BEInitProps, DbProps, MariaDbProps, PhpProps};
 use std::process::{Child, Command};
 
 #[allow(dead_code)]
@@ -11,12 +11,13 @@ pub struct RunningServices {
 
 pub async fn start_all(
     config: &BEInitProps,
+    db: &DbProps,
     paths: &BEInitPaths,
 ) -> Result<RunningServices, Box<dyn std::error::Error>> {
     println!("🚀 Iniciando serviços Beinit...");
 
     // 1. MariaDB
-    let mariadb_child = start_mariadb(&config.mariadb, paths).await?;
+    let mariadb_child = start_mariadb(&config.mariadb, db, paths).await?;
 
     // 2. PHP Built-in Server
     let php_child = start_php(&config.php, &config.project_config.backend_path, paths)?;
@@ -89,6 +90,7 @@ fn start_bun(
 
 async fn start_mariadb(
     mariadb_config: &MariaDbProps,
+    db: &DbProps,
     paths: &BEInitPaths,
 ) -> Result<Child, Box<dyn std::error::Error>> {
     let mariadb_dir = paths.get_mariadb_dir(&mariadb_config.version);
@@ -118,7 +120,16 @@ async fn start_mariadb(
         &mariadb_config.port.to_string(),
         "--datadir",
         &mariadb_config.data_dir,
+        "--user",
+        &db.user,
+        "--default-authentication-plugin=mysql_native_password",
     ]);
+
+    // Definir variável de ambiente para a senha inicial do root se estiver inicializando
+    cmd.env("MARIADB_ROOT_PASSWORD", &db.password);
+    cmd.env("MARIADB_DATABASE", &db.database);
+    cmd.env("MARIADB_USER", &db.user);
+    cmd.env("MARIADB_PASSWORD", &db.password);
 
     let child = cmd.spawn()?;
     Ok(child)

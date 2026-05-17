@@ -45,3 +45,17 @@ pub struct MariaDbProps {
     pub port: u16,
     pub data_dir: String,
 }
+
+/// Credenciais do banco de dados (lidas do beinit.db.json)
+#[derive(Debug, Deserialize, Clone)]
+pub struct DbProps {
+    pub user: String,
+    pub password: String,
+    pub database: String,
+}
+
+/// Wrapper para o beinit.db.json (campo raiz "db")
+#[derive(Debug, Deserialize)]
+pub struct DbConfig {
+    pub db: DbProps,
+}

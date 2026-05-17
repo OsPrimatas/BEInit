@@ -26,8 +26,8 @@ impl BEInitPaths {
     }
 
     /// Retorna o caminho: bin/beinit/{version}/
-    pub fn get_beinit_path(&self) -> PathBuf {
-        self.bin_dir.join("beinit")
+    pub fn get_beinit_tool_path(&self) -> PathBuf {
+        self.bin_dir.join("beinit_tool")
     }
 
     /// Procura recursivamente por um executável com o nome dado dentro de um diretório
