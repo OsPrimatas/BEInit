@@ -2,6 +2,6 @@
   "db": {
     "user": "root",
     "password": "admin",
-    "database": "beinit_db"
+    "database": "bei_db"
   }
 }

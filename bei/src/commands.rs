@@ -276,13 +276,13 @@ fn init_project() -> Result<(), Box<dyn Error>> {
             std::fs::write(&env_path, default_env_content)?;
             println!("✅ Arquivo .env criado em {}/", backend_path);
         }
+    }
 
-        // bei.db.json no backend (credenciais do banco de dados)
-        let db_json_path = format!("{}/bei.db.json", backend_path);
-        if !std::path::Path::new(&db_json_path).exists() {
-            std::fs::write(&db_json_path, default_db_json)?;
-            println!("✅ Arquivo bei.db.json criado em {}/", backend_path);
-        }
+    // bei.db.json no backend (credenciais do banco de dados) - sempre criado junto do composer.json
+    let db_json_path = format!("{}/bei.db.json", backend_path);
+    if !std::path::Path::new(&db_json_path).exists() {
+        std::fs::write(&db_json_path, default_db_json)?;
+        println!("✅ Arquivo bei.db.json criado em {}/", backend_path);
     }
 
     // composer.json no backend
