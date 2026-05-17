@@ -61,7 +61,18 @@ impl BeiPaths {
         if !dir.exists() {
             return None;
         }
-        let exe_name = format!("{}{}", name, std::env::consts::EXE_SUFFIX);
+        
+        let valid_names = if cfg!(target_os = "windows") {
+            vec![
+                format!("{}.exe", name),
+                format!("{}.bat", name),
+                format!("{}.cmd", name),
+                name.to_string(),
+            ]
+        } else {
+            vec![name.to_string()]
+        };
+
         let mut stack = vec![dir.to_path_buf()];
 
         while let Some(current) = stack.pop() {
@@ -70,7 +81,7 @@ impl BeiPaths {
                     let path = entry.path();
                     if path.is_file() {
                         if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
-                            if file_name == exe_name {
+                            if valid_names.iter().any(|n| n == file_name) {
                                 return Some(path);
                             }
                         }

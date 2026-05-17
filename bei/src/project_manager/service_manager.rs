@@ -93,6 +93,7 @@ async fn start_mariadb(
     let mariadb_dir = paths.get_mariadb_dir(&mariadb_config.version);
     let mariadb_bin = paths
         .find_executable(&mariadb_dir, "mariadbd")
+        .or_else(|| paths.find_executable(&mariadb_dir, "mysqld"))
         .ok_or_else(|| {
             format!(
                 "Não foi possível encontrar o executável do mariadbd para a versão {}",
@@ -105,28 +106,62 @@ async fn start_mariadb(
         mariadb_config.version, mariadb_config.port
     );
 
-    // Criar diretório de dados do MariaDB se não existir
-    let data_dir_path = std::path::Path::new(&mariadb_config.data_dir);
+    let current_dir = std::env::current_dir()?;
+    let data_dir_path = current_dir.join(&mariadb_config.data_dir);
     if !data_dir_path.exists() {
-        std::fs::create_dir_all(data_dir_path)?;
+        std::fs::create_dir_all(&data_dir_path)?;
     }
 
+    let mysql_system_db = data_dir_path.join("mysql");
+    if !mysql_system_db.exists() {
+        println!("📦 Inicializando diretório de dados do MariaDB...");
+        let install_bin = paths
+            .find_executable(&mariadb_dir, "mariadb-install-db")
+            .or_else(|| paths.find_executable(&mariadb_dir, "mysql_install_db"))
+            .ok_or_else(|| {
+                format!(
+                    "Não foi possível encontrar o executável de instalação do MariaDB na versão {}",
+                    mariadb_config.version
+                )
+            })?;
+
+        let mut install_cmd = Command::new(install_bin);
+        // Evitar caminhos UNC (\\?\) que o canonicalize gera no Windows
+        let datadir_str = data_dir_path.to_string_lossy().replace("\\\\?\\", "");
+        install_cmd.args([
+            &format!("--datadir={}", datadir_str),
+        ]);
+
+        let status = install_cmd.status()?;
+        if !status.success() {
+            return Err("Falha ao inicializar o banco de dados do MariaDB".into());
+        }
+    }
+
+    // Criar o init.sql para garantir usuário, senha e banco de dados
+    let init_sql_path = data_dir_path.join("init.sql");
+    let init_sql_content = format!(
+        "CREATE DATABASE IF NOT EXISTS `{}`;\n\
+         CREATE USER IF NOT EXISTS '{}'@'localhost' IDENTIFIED BY '{}';\n\
+         ALTER USER '{}'@'localhost' IDENTIFIED BY '{}';\n\
+         GRANT ALL PRIVILEGES ON `{}`.* TO '{}'@'localhost';\n\
+         GRANT ALL PRIVILEGES ON *.* TO '{}'@'localhost' WITH GRANT OPTION;\n\
+         FLUSH PRIVILEGES;\n",
+        db.database, db.user, db.password, db.user, db.password, db.database, db.user, db.user
+    );
+    std::fs::write(&init_sql_path, init_sql_content)?;
+
     let mut cmd = Command::new(mariadb_bin);
+    let datadir_str = data_dir_path.to_string_lossy().replace("\\\\?\\", "");
+    let init_sql_str = init_sql_path.to_string_lossy().replace("\\\\?\\", "");
+    
     cmd.args([
         "--port",
         &mariadb_config.port.to_string(),
-        "--datadir",
-        &mariadb_config.data_dir,
-        "--user",
-        &db.user,
-        "--default-authentication-plugin=mysql_native_password",
+        &format!("--datadir={}", datadir_str),
+        &format!("--init-file={}", init_sql_str),
+        "--console",
     ]);
-
-    // Definir variável de ambiente para a senha inicial do root se estiver inicializando
-    cmd.env("MARIADB_ROOT_PASSWORD", &db.password);
-    cmd.env("MARIADB_DATABASE", &db.database);
-    cmd.env("MARIADB_USER", &db.user);
-    cmd.env("MARIADB_PASSWORD", &db.password);
 
     let child = cmd.spawn()?;
     Ok(child)

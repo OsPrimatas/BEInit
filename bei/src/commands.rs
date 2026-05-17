@@ -86,31 +86,31 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
             println!("╠══════════════════════════════════════════════════════╣");
             println!("║      PHP Dev Server                                  ║");
             println!(
-                "║      URL:   http://localhost:{}                      ║",
-                config.php.port
+                "║      URL:   {:<41}║",
+                format!("http://localhost:{}", config.php.port)
             );
             println!("╠══════════════════════════════════════════════════════╣");
             println!("║      MariaDB                                         ║");
-            println!("║      Host:      localhost                            ║");
+            println!("║      Host:      {:<37}║", "localhost");
             println!(
-                "║      Porta:     {}                                   ║",
+                "║      Porta:     {:<37}║",
                 config.mariadb.port
             );
             println!(
-                "║      Banco:     {}                                   ║",
+                "║      Banco:     {:<37}║",
                 db.database
             );
             println!(
-                "║      Usuário:   {}                                   ║",
+                "║      Usuário:   {:<37}║",
                 db.user
             );
             println!(
-                "║      Senha:     {}                                   ║",
+                "║      Senha:     {:<37}║",
                 db.password
             );
             println!(
-                "║      URL JDBC:  jdbc:mariadb://localhost:{}/{}       ║",
-                config.mariadb.port, db.database
+                "║      URL JDBC:  {:<37}║",
+                format!("jdbc:mariadb://localhost:{}/{}", config.mariadb.port, db.database)
             );
             println!("╠══════════════════════════════════════════════════════╣");
             println!("║      Bun  -  Frontend Dev Server                     ║");
@@ -128,19 +128,27 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
             let config = load_configs()?;
             let paths = BeiPaths::new();
             let php_dir = paths.ensure_version_dir("php", &config.php.version)?;
-            let php_exe = paths
-                .find_executable(&php_dir, "php")
-                .expect("PHP não encontrado. Execute 'bei install' primeiro.");
+            let php_exe = match paths.find_executable(&php_dir, "php") {
+                Some(exe) => exe,
+                None => {
+                    eprintln!("❌ PHP não encontrado. Execute 'bei install' primeiro.");
+                    std::process::exit(1);
+                }
+            };
 
             std::process::Command::new(php_exe).args(args).status()?;
         }
         Commands::Bun { args } => {
-            let config = load_configs()?;
+            // O download manager instala o Bun sempre na pasta 'latest'
             let paths = BeiPaths::new();
-            let bun_dir = paths.ensure_version_dir("bun", &config.bun.version)?;
-            let bun_exe = paths
-                .find_executable(&bun_dir, "bun")
-                .expect("Bun não encontrado. Execute 'bei install' primeiro.");
+            let bun_dir = paths.ensure_version_dir("bun", "latest")?;
+            let bun_exe = match paths.find_executable(&bun_dir, "bun") {
+                Some(exe) => exe,
+                None => {
+                    eprintln!("❌ Bun não encontrado. Execute 'bei install' primeiro.");
+                    std::process::exit(1);
+                }
+            };
 
             std::process::Command::new(bun_exe).args(args).status()?;
         }
@@ -148,9 +156,13 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
             let config = load_configs()?;
             let paths = BeiPaths::new();
             let composer_dir = paths.ensure_version_dir("composer", &config.composer.version)?;
-            let composer_exe = paths
-                .find_executable(&composer_dir, "composer")
-                .expect("Composer não encontrado. Execute 'bei install' primeiro.");
+            let composer_exe = match paths.find_executable(&composer_dir, "composer") {
+                Some(exe) => exe,
+                None => {
+                    eprintln!("❌ Composer não encontrado. Execute 'bei install' primeiro.");
+                    std::process::exit(1);
+                }
+            };
 
             let php_dir = paths.ensure_version_dir("php", &config.php.version)?;
 
