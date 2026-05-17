@@ -49,10 +49,3 @@ pub struct MariaDbProps {
     pub data_dir: String,
 }
 
-/// Configurações do BEInit DB
-#[derive(Debug, Deserialize)]
-pub struct BEInitDbProps {
-    pub mariadb_user: String,
-    pub mariadb_password: String,
-    pub mariadb_database: String,
-}

@@ -1,5 +1,5 @@
 use crate::utils::beinit_paths::BEInitPaths;
-use crate::utils::beinit_props::{BEInitDbProps, BEInitProps, MariaDbProps, PhpProps};
+use crate::utils::beinit_props::{BEInitProps, MariaDbProps, PhpProps};
 use std::process::{Child, Command};
 
 #[allow(dead_code)]
@@ -11,13 +11,12 @@ pub struct RunningServices {
 
 pub async fn start_all(
     config: &BEInitProps,
-    db_config: &BEInitDbProps,
     paths: &BEInitPaths,
 ) -> Result<RunningServices, Box<dyn std::error::Error>> {
     println!("🚀 Iniciando serviços Beinit...");
 
     // 1. MariaDB
-    let mariadb_child = start_mariadb(&config.mariadb, db_config, paths).await?;
+    let mariadb_child = start_mariadb(&config.mariadb, paths).await?;
 
     // 2. PHP Built-in Server
     let php_child = start_php(&config.php, &config.project_config.backend_path, paths)?;
@@ -82,7 +81,6 @@ fn start_bun(
 
 async fn start_mariadb(
     mariadb_config: &MariaDbProps,
-    _db_config: &BEInitDbProps,
     paths: &BEInitPaths,
 ) -> Result<Child, Box<dyn std::error::Error>> {
     let mariadb_dir = paths.get_mariadb_dir(&mariadb_config.version);

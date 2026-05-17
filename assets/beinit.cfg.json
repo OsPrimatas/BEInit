@@ -1,13 +1,10 @@
 {
   "project_config": {
-    "project_name": "project",
     "frontend_path": "frontend",
     "backend_path": "backend",
     "add_gitignore": true,
     "add_env": true,
-    "add_composer_file": true,
-    "add_frontend_folder": true,
-    "add_backend_folder": true
+    "add_composer_file": true
   },
 
   "bun": {
@@ -15,7 +12,7 @@
   },
 
   "php": {
-    "version": "8.5",
+    "version": "8.5.6",
     "port": 8080,
     "display_errors": true
   },
