@@ -1,0 +1,15 @@
+[package]
+name = "beinit_install"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+clap.workspace = true
+reqwest.workspace = true
+zip.workspace = true
+directories.workspace = true
+winreg = "0.56.0"

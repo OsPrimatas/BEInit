@@ -1,9 +1,18 @@
-[package]
-name = "beinit"
+[workspace]
+resolver = "2"
+members = [
+  "beinit_tool",
+  "beinit_install"
+]
+
+[workspace.package]
 version = "1.1.0"
 edition = "2024"
+authors = ["g0uvea <contato@g0uvea.com>"]
+repository = "https://github.com/OsPrimatas/BEInit"
+license = "MIT"
 
-[dependencies]
+[workspace.dependencies]
 clap = { version = "4.6.0", features = ["derive"] }
 serde = { version = "1.0.228", features = ["derive"] }
 reqwest = { version = "0.13.2", features = ["blocking", "json"] }
