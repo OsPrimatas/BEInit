@@ -38,8 +38,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(target_os = "windows")]
 fn setup_env_variables(path_value: &str) -> std::io::Result<()> {
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let (env, _) = hkcu.create_subkey("Environment")?;
+    let hkcu = RegKey::predef(HKEY_LOCAL_MACHINE);
+    let (env, _) =
+        hkcu.create_subkey(r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment")?;
 
     // Criar a variável BEINIT_TOOL
     env.set_value("BEINIT_TOOL", &path_value)?;

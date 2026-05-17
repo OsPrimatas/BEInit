@@ -11,8 +11,11 @@ use crate::utils::beinit_paths::BEInitPaths;
 
 #[derive(Parser)]
 #[command(
+    name = "beinit",
+    alias = "bei",
     author,
     version,
+    long_about = None,
     about = "Beinit - Gerenciador local de ambiente PHP + MariaDB"
 )]
 pub struct Cli {
