@@ -8,8 +8,13 @@ pub fn get_download_url(tool: &str, version: &str) -> Result<String, Box<dyn std
         "php" => get_php_url(version, os),
         "mariadb" => get_mariadb_url(version, os),
         "bun" => get_bun_url(version, os, arch),
+        "composer" => get_composer_url(version),
         _ => Err(format!("Ferramenta desconhecida: {}", tool).into()),
     }
+}
+
+fn get_composer_url(version: &str) -> Result<String, Box<dyn std::error::Error>> {
+    Ok(format!("https://getcomposer.org/download/{}/composer.phar", version))
 }
 
 fn get_php_url(version: &str, os: &str) -> Result<String, Box<dyn std::error::Error>> {

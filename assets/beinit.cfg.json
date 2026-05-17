@@ -1,6 +1,18 @@
 {
-  "frontend_path": "./frontend",
-  "backend_path": "./backend",
+  "project_config": {
+    "project_name": "project",
+    "frontend_path": "frontend",
+    "backend_path": "backend",
+    "add_gitignore": true,
+    "add_env": true,
+    "add_composer_file": true,
+    "add_frontend_folder": true,
+    "add_backend_folder": true
+  },
+
+  "bun": {
+    "version": "1.3.14"
+  },
 
   "php": {
     "version": "8.5",
@@ -12,5 +24,9 @@
     "version": "11.8.6",
     "port": 3306,
     "data_dir": "./.beinit/db_data"
+  },
+
+  "composer": {
+    "version": "2.8.6"
   }
 }

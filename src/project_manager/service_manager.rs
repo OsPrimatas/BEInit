@@ -20,10 +20,10 @@ pub async fn start_all(
     let mariadb_child = start_mariadb(&config.mariadb, db_config, paths).await?;
 
     // 2. PHP Built-in Server
-    let php_child = start_php(&config.php, &config.backend_path, paths)?;
+    let php_child = start_php(&config.php, &config.project_config.backend_path, paths)?;
 
     // 3. Bun (frontend)
-    let bun_child = start_bun(&config.frontend_path, paths)?;
+    let bun_child = start_bun(&config.project_config.frontend_path, paths)?;
 
     Ok(RunningServices {
         mariadb: Some(mariadb_child),

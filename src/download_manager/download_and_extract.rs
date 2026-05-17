@@ -35,8 +35,8 @@ pub async fn download_and_extract(
         extract_zip(&bytes, target_dir)?;
     } else if url.contains(".tar.gz") || url.contains(".tgz") {
         extract_tar_gz(&bytes, target_dir)?;
-    } else if url.ends_with(".exe") {
-        let filename = url.split('/').last().unwrap_or("download.exe");
+    } else if url.ends_with(".exe") || url.ends_with(".phar") {
+        let filename = url.split('/').last().unwrap_or("download");
         let outpath = target_dir.join(filename);
         std::fs::write(outpath, &bytes)?;
     } else {
