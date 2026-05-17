@@ -3,14 +3,11 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct ProjectConfigProps {
-    pub project_name: String,
     pub frontend_path: String,
     pub backend_path: String,
     pub add_gitignore: bool,
     pub add_env: bool,
     pub add_composer_file: bool,
-    pub add_frontend_folder: bool,
-    pub add_backend_folder: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -48,4 +45,3 @@ pub struct MariaDbProps {
     pub port: u16,
     pub data_dir: String,
 }
-
