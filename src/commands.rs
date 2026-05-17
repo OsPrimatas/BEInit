@@ -137,7 +137,17 @@ fn init_project() -> Result<(), Box<dyn Error>> {
     let default_cfg = include_str!("../assets/beinit.cfg.json");
     let default_env = include_str!("../assets/beinit.db.env");
 
-    let parsed_cfg: serde_json::Value = serde_json::from_str(default_cfg)?;
+    // Se o arquivo cfg_path já existe, lê o que está no arquivo. Caso contrário, cria o default e usa.
+    let cfg_content = if std::path::Path::new(cfg_path).exists() {
+        println!("ℹ️  Arquivo beinit.cfg.json já existe. Usando configurações existentes.");
+        std::fs::read_to_string(cfg_path)?
+    } else {
+        std::fs::write(cfg_path, default_cfg)?;
+        println!("✅ Arquivo beinit.cfg.json criado!");
+        default_cfg.to_string()
+    };
+
+    let parsed_cfg: serde_json::Value = serde_json::from_str(&cfg_content)?;
     let frontend_path = parsed_cfg["project_config"]["frontend_path"]
         .as_str()
         .unwrap_or("frontend");
@@ -155,13 +165,6 @@ fn init_project() -> Result<(), Box<dyn Error>> {
         .as_bool()
         .unwrap_or(true);
 
-    if !std::path::Path::new(cfg_path).exists() {
-        std::fs::write(cfg_path, default_cfg)?;
-        println!("✅ Arquivo beinit.cfg.json criado!");
-    } else {
-        println!("ℹ️  Arquivo beinit.cfg.json já existe.");
-    }
-
     // Criar pastas
     if !std::path::Path::new(frontend_path).exists() {
         std::fs::create_dir_all(frontend_path)?;
@@ -176,6 +179,9 @@ fn init_project() -> Result<(), Box<dyn Error>> {
     // .gitignore
     if add_gitignore {
         let gitignore_path = ".gitignore";
+        let env_entry = format!("{}/.env", backend_path);
+        let db_env_entry = format!("{}/beinit.db.env", backend_path);
+
         if !std::path::Path::new(gitignore_path).exists() {
             let gitignore_content = format!(
                 r#"# IDEs e Editores
@@ -194,21 +200,52 @@ fn init_project() -> Result<(), Box<dyn Error>> {
 
 # BEInit e Dados Locais
 .beinit/
-{}/.env
+{}
+{}
 "#,
-                frontend_path, frontend_path, frontend_path, backend_path, backend_path
+                frontend_path, frontend_path, frontend_path, backend_path, env_entry, db_env_entry
             );
             std::fs::write(gitignore_path, gitignore_content)?;
             println!("✅ Arquivo .gitignore criado!");
+        } else {
+            // Se já existe, garante que .env e beinit.db.env estão lá
+            let mut content = std::fs::read_to_string(gitignore_path)?;
+            let mut modified = false;
+
+            if !content.contains(&env_entry) {
+                if !content.ends_with('\n') {
+                    content.push('\n');
+                }
+                content.push_str(&format!("{}\n", env_entry));
+                modified = true;
+            }
+            if !content.contains(&db_env_entry) {
+                if !content.ends_with('\n') {
+                    content.push('\n');
+                }
+                content.push_str(&format!("{}\n", db_env_entry));
+                modified = true;
+            }
+
+            if modified {
+                std::fs::write(gitignore_path, content)?;
+                println!("✅ Arquivo .gitignore atualizado com novas exclusões!");
+            }
         }
     }
 
-    // .env no backend
+    // .env e beinit.db.env no backend
     if add_env {
         let env_path = format!("{}/.env", backend_path);
         if !std::path::Path::new(&env_path).exists() {
             std::fs::write(&env_path, default_env)?;
             println!("✅ Arquivo .env criado em {}/", backend_path);
+        }
+
+        let db_env_path = format!("{}/beinit.db.env", backend_path);
+        if !std::path::Path::new(&db_env_path).exists() {
+            std::fs::write(&db_env_path, default_env)?;
+            println!("✅ Arquivo beinit.db.env criado em {}/", backend_path);
         }
     }
 

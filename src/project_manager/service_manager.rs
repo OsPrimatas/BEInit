@@ -41,7 +41,11 @@ fn start_php(
         .find_executable(&php_dir, "php")
         .unwrap_or_else(|| std::path::PathBuf::from("php"));
 
-    let backend_abs = std::fs::canonicalize(backend_path)?;
+    let backend_path_buf = std::path::PathBuf::from(backend_path);
+    if !backend_path_buf.exists() {
+        std::fs::create_dir_all(&backend_path_buf)?;
+    }
+    let backend_abs = std::fs::canonicalize(backend_path_buf)?;
 
     println!("🌐 Iniciando PHP em http://localhost:{}", php_config.port);
 
@@ -62,7 +66,11 @@ fn start_bun(
     frontend_path: &str,
     paths: &BEInitPaths,
 ) -> Result<Child, Box<dyn std::error::Error>> {
-    let frontend_abs = std::fs::canonicalize(frontend_path)?;
+    let frontend_path_buf = std::path::PathBuf::from(frontend_path);
+    if !frontend_path_buf.exists() {
+        std::fs::create_dir_all(&frontend_path_buf)?;
+    }
+    let frontend_abs = std::fs::canonicalize(frontend_path_buf)?;
 
     let bun_dir = paths.get_bun_dir("latest");
     let bun_bin = paths
@@ -97,6 +105,12 @@ async fn start_mariadb(
         "🗄️  Iniciando MariaDB v{} na porta {}",
         mariadb_config.version, mariadb_config.port
     );
+
+    // Criar diretório de dados do MariaDB se não existir
+    let data_dir_path = std::path::Path::new(&mariadb_config.data_dir);
+    if !data_dir_path.exists() {
+        std::fs::create_dir_all(data_dir_path)?;
+    }
 
     let mut cmd = Command::new(mariadb_bin);
     cmd.args([
