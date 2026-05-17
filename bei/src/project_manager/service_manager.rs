@@ -1,5 +1,5 @@
-use crate::utils::beinit_paths::BEInitPaths;
-use crate::utils::beinit_props::{BEInitProps, DbProps, MariaDbProps, PhpProps};
+use crate::utils::bei_paths::BeiPaths;
+use crate::utils::bei_props::{BeiProps, DbProps, MariaDbProps, PhpProps};
 use std::process::{Child, Command};
 
 #[allow(dead_code)]
@@ -10,11 +10,11 @@ pub struct RunningServices {
 }
 
 pub async fn start_all(
-    config: &BEInitProps,
+    config: &BeiProps,
     db: &DbProps,
-    paths: &BEInitPaths,
+    paths: &BeiPaths,
 ) -> Result<RunningServices, Box<dyn std::error::Error>> {
-    println!("🚀 Iniciando serviços Beinit...");
+    println!("Iniciando serviços bei...");
 
     // 1. MariaDB
     let mariadb_child = start_mariadb(&config.mariadb, db, paths).await?;
@@ -35,7 +35,7 @@ pub async fn start_all(
 fn start_php(
     php_config: &PhpProps,
     backend_path: &str,
-    paths: &BEInitPaths,
+    paths: &BeiPaths,
 ) -> Result<Child, Box<dyn std::error::Error>> {
     let php_dir = paths.get_php_dir(&php_config.version);
     let php_bin = paths
@@ -48,7 +48,7 @@ fn start_php(
     }
     let backend_abs = std::fs::canonicalize(backend_path_buf)?;
 
-    println!("🌐 Iniciando PHP em http://localhost:{}", php_config.port);
+    println!("Iniciando PHP em http://localhost:{}", php_config.port);
 
     let child = Command::new(php_bin)
         .args([
@@ -63,10 +63,7 @@ fn start_php(
     Ok(child)
 }
 
-fn start_bun(
-    frontend_path: &str,
-    paths: &BEInitPaths,
-) -> Result<Child, Box<dyn std::error::Error>> {
+fn start_bun(frontend_path: &str, paths: &BeiPaths) -> Result<Child, Box<dyn std::error::Error>> {
     let frontend_path_buf = std::path::PathBuf::from(frontend_path);
     if !frontend_path_buf.exists() {
         std::fs::create_dir_all(&frontend_path_buf)?;
@@ -91,7 +88,7 @@ fn start_bun(
 async fn start_mariadb(
     mariadb_config: &MariaDbProps,
     db: &DbProps,
-    paths: &BEInitPaths,
+    paths: &BeiPaths,
 ) -> Result<Child, Box<dyn std::error::Error>> {
     let mariadb_dir = paths.get_mariadb_dir(&mariadb_config.version);
     let mariadb_bin = paths

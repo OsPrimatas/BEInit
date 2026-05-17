@@ -20,7 +20,7 @@
   "mariadb": {
     "version": "11.8.6",
     "port": 3306,
-    "data_dir": "./.beinit/db_data"
+    "data_dir": "./.bei/db_data"
   },
 
   "composer": {

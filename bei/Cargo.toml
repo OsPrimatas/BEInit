@@ -1,5 +1,5 @@
 [package]
-name = "beinit_tool"
+name = "bei"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

@@ -8,7 +8,7 @@ pub async fn download_and_extract(
     url: &str,
     target_dir: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("⬇️  Iniciando download: {}", url);
+    println!("Iniciando download: {}", url);
 
     let response = reqwest::get(url).await?;
 
@@ -19,7 +19,7 @@ pub async fn download_and_extract(
     let bytes = response.bytes().await?;
 
     println!(
-        "📦 Download concluído ({} MB)",
+        "Download concluído ({} MB)",
         bytes.len() as f64 / 1_048_576.0
     );
 
@@ -28,7 +28,7 @@ pub async fn download_and_extract(
         std::fs::create_dir_all(target_dir)?;
     }
 
-    println!("📂 Extraindo arquivos para {:?}...", target_dir);
+    println!("Extraindo arquivos para {:?}...", target_dir);
 
     // Detecta o formato pelo final da URL
     if url.contains(".zip") {
@@ -43,7 +43,7 @@ pub async fn download_and_extract(
         return Err(format!("Formato de arquivo não suportado para a URL: {}", url).into());
     }
 
-    println!("✅ Extração concluída com sucesso!");
+    println!("Extração concluída com sucesso!");
     Ok(())
 }
 

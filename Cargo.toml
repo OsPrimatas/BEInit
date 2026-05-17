@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-  "beinit_tool",
-  "beinit_install"
+  "bei",
+  "bei_install"
 ]
 
 [workspace.package]

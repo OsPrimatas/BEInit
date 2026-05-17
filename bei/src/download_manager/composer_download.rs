@@ -1,20 +1,20 @@
 use super::download_and_extract::download_and_extract;
 use super::get_download_url::get_download_url;
-use crate::utils::beinit_paths::BEInitPaths;
+use crate::utils::bei_paths::BeiPaths;
 
 pub async fn download_composer_if_needed(
     version: &str,
-    paths: &BEInitPaths,
+    paths: &BeiPaths,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let composer_dir = paths.ensure_version_dir("composer", version)?;
 
     // Se já estiver baixado, não faz nada.
     if composer_dir.join("composer.phar").exists() {
-        println!("✅ Composer {} já está instalado.", version);
+        println!("Composer {} já está instalado.", version);
         return Ok(());
     }
 
-    println!("⬇️  Baixando Composer {}...", version);
+    println!("Baixando Composer {}...", version);
 
     // URL do composer.
     let url = get_download_url("composer", version)?;

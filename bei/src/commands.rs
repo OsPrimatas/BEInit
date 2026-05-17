@@ -7,16 +7,15 @@ use crate::download_manager::mariadb_download;
 use crate::download_manager::php_download;
 use crate::project_manager::read_cfg::{load_configs, load_db_config};
 use crate::project_manager::service_manager;
-use crate::utils::beinit_paths::BEInitPaths;
+use crate::utils::bei_paths::BeiPaths;
 
 #[derive(Parser)]
 #[command(
-    name = "beinit",
-    alias = "bei",
+    name = "bei",
     author,
     version,
     long_about = None,
-    about = "Beinit - Gerenciador local de ambiente PHP + MariaDB"
+    about = "Bei - Gerenciador local de ambiente PHP + MariaDB"
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -50,13 +49,13 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
 
     match cli.command {
         Commands::Init => {
-            println!("🚀 Inicializando projeto...");
+            println!("Inicializando projeto...");
             init_project()?;
         }
         Commands::Install => {
-            println!("🛠️  Instalando dependências do projeto...");
+            println!("Instalando dependências do projeto...");
             let config = load_configs()?;
-            let paths = BEInitPaths::new();
+            let paths = BeiPaths::new();
             paths.ensure_dirs_exist()?;
 
             // Download PHP
@@ -72,12 +71,12 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
             composer_download::download_composer_if_needed(&config.composer.version, &paths)
                 .await?;
 
-            println!("✨ Instalação concluída com sucesso!");
+            println!("Instalação concluída com sucesso!");
         }
         Commands::Run => {
             let config = load_configs()?;
             let db = load_db_config()?;
-            let paths = BEInitPaths::new();
+            let paths = BeiPaths::new();
 
             let _services = service_manager::start_all(&config, &db, &paths).await?;
 
@@ -123,35 +122,35 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
             tokio::signal::ctrl_c().await?;
             println!("\n⏹️  Recebido Ctrl+C, parando serviços...");
         }
-        Commands::Stop => println!("⏹️  Parando serviços..."),
-        Commands::Status => println!("📊 Status atual..."),
+        Commands::Stop => println!("Parando serviços..."),
+        Commands::Status => println!("Status atual..."),
         Commands::Php { args } => {
             let config = load_configs()?;
-            let paths = BEInitPaths::new();
+            let paths = BeiPaths::new();
             let php_dir = paths.ensure_version_dir("php", &config.php.version)?;
             let php_exe = paths
                 .find_executable(&php_dir, "php")
-                .expect("PHP não encontrado. Execute 'beinit install' primeiro.");
+                .expect("PHP não encontrado. Execute 'bei install' primeiro.");
 
             std::process::Command::new(php_exe).args(args).status()?;
         }
         Commands::Bun { args } => {
             let config = load_configs()?;
-            let paths = BEInitPaths::new();
+            let paths = BeiPaths::new();
             let bun_dir = paths.ensure_version_dir("bun", &config.bun.version)?;
             let bun_exe = paths
                 .find_executable(&bun_dir, "bun")
-                .expect("Bun não encontrado. Execute 'beinit install' primeiro.");
+                .expect("Bun não encontrado. Execute 'bei install' primeiro.");
 
             std::process::Command::new(bun_exe).args(args).status()?;
         }
         Commands::Composer { args } => {
             let config = load_configs()?;
-            let paths = BEInitPaths::new();
+            let paths = BeiPaths::new();
             let composer_dir = paths.ensure_version_dir("composer", &config.composer.version)?;
             let composer_exe = paths
                 .find_executable(&composer_dir, "composer")
-                .expect("Composer não encontrado. Execute 'beinit install' primeiro.");
+                .expect("Composer não encontrado. Execute 'bei install' primeiro.");
 
             let php_dir = paths.ensure_version_dir("php", &config.php.version)?;
 
@@ -166,19 +165,19 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
 }
 
 fn init_project() -> Result<(), Box<dyn Error>> {
-    let cfg_path = "beinit.cfg.json";
+    let cfg_path = "bei.cfg.json";
 
     // Ler os templates embutidos
-    let default_cfg = include_str!("../assets/beinit.cfg.json");
-    let default_db_json = include_str!("../assets/beinit.db.json");
+    let default_cfg = include_str!("../assets/bei.cfg.json");
+    let default_db_json = include_str!("../assets/bei.db.json");
 
     // Se o arquivo cfg_path já existe, lê o que está no arquivo. Caso contrário, cria o default e usa.
     let cfg_content = if std::path::Path::new(cfg_path).exists() {
-        println!("ℹ️  Arquivo beinit.cfg.json já existe. Usando configurações existentes.");
+        println!("ℹ️  Arquivo bei.cfg.json já existe. Usando configurações existentes.");
         std::fs::read_to_string(cfg_path)?
     } else {
         std::fs::write(cfg_path, default_cfg)?;
-        println!("✅ Arquivo beinit.cfg.json criado!");
+        println!("✅ Arquivo bei.cfg.json criado!");
         default_cfg.to_string()
     };
 
@@ -215,7 +214,7 @@ fn init_project() -> Result<(), Box<dyn Error>> {
     if add_gitignore {
         let gitignore_path = ".gitignore";
         let env_entry = format!("{}/.env", backend_path);
-        let db_json_entry = format!("{}/beinit.db.json", backend_path);
+        let db_json_entry = format!("{}/bei.db.json", backend_path);
 
         if !std::path::Path::new(gitignore_path).exists() {
             let gitignore_content = format!(
@@ -233,8 +232,8 @@ fn init_project() -> Result<(), Box<dyn Error>> {
 # Composer
 {}/vendor/
 
-# BEInit e Dados Locais
-.beinit/
+# bei e Dados Locais
+.bei/
 {}
 {}
 "#,
@@ -243,7 +242,7 @@ fn init_project() -> Result<(), Box<dyn Error>> {
             std::fs::write(gitignore_path, gitignore_content)?;
             println!("✅ Arquivo .gitignore criado!");
         } else {
-            // Se já existe, garante que .env e beinit.db.json estão lá
+            // Se já existe, garante que .env e bei.db.json estão lá
             let mut content = std::fs::read_to_string(gitignore_path)?;
             let mut modified = false;
 
@@ -278,11 +277,11 @@ fn init_project() -> Result<(), Box<dyn Error>> {
             println!("✅ Arquivo .env criado em {}/", backend_path);
         }
 
-        // beinit.db.json no backend (credenciais do banco de dados)
-        let db_json_path = format!("{}/beinit.db.json", backend_path);
+        // bei.db.json no backend (credenciais do banco de dados)
+        let db_json_path = format!("{}/bei.db.json", backend_path);
         if !std::path::Path::new(&db_json_path).exists() {
             std::fs::write(&db_json_path, default_db_json)?;
-            println!("✅ Arquivo beinit.db.json criado em {}/", backend_path);
+            println!("✅ Arquivo bei.db.json criado em {}/", backend_path);
         }
     }
 
@@ -291,8 +290,8 @@ fn init_project() -> Result<(), Box<dyn Error>> {
         let composer_path = format!("{}/composer.json", backend_path);
         if !std::path::Path::new(&composer_path).exists() {
             let composer_content = r#"{
-    "name": "beinit/backend",
-    "description": "Backend project powered by BEInit",
+    "name": "bei/backend",
+    "description": "Backend project powered by bei",
     "type": "project",
     "require": {}
 }"#;

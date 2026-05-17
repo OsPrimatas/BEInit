@@ -119,19 +119,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
-name = "beinit_install"
-version = "1.0.0"
-dependencies = [
- "clap",
- "directories",
- "reqwest",
- "serde",
- "winreg",
- "zip",
-]
-
-[[package]]
-name = "beinit_tool"
+name = "bei"
 version = "1.0.0"
 dependencies = [
  "clap",
@@ -145,6 +133,18 @@ dependencies = [
  "serde_json",
  "tar",
  "tokio",
+ "zip",
+]
+
+[[package]]
+name = "bei_install"
+version = "1.0.0"
+dependencies = [
+ "clap",
+ "directories",
+ "reqwest",
+ "serde",
+ "winreg",
  "zip",
 ]
 

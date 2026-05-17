@@ -20,9 +20,9 @@ pub struct ComposerProps {
     pub version: String,
 }
 
-/// Configurações do BEInit
+/// Configurações do bei
 #[derive(Debug, Deserialize)]
-pub struct BEInitProps {
+pub struct BeiProps {
     pub project_config: ProjectConfigProps,
     pub bun: BunProps,
     pub php: PhpProps,
@@ -46,7 +46,7 @@ pub struct MariaDbProps {
     pub data_dir: String,
 }
 
-/// Credenciais do banco de dados (lidas do beinit.db.json)
+/// Credenciais do banco de dados (lidas do bei.db.json)
 #[derive(Debug, Deserialize, Clone)]
 pub struct DbProps {
     pub user: String,
@@ -54,7 +54,7 @@ pub struct DbProps {
     pub database: String,
 }
 
-/// Wrapper para o beinit.db.json (campo raiz "db")
+/// Wrapper para o bei.db.json (campo raiz "db")
 #[derive(Debug, Deserialize)]
 pub struct DbConfig {
     pub db: DbProps,
