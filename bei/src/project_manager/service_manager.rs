@@ -1,6 +1,6 @@
 use crate::project_manager::read_cfg::find_project_root;
 use crate::utils::bei_paths::BeiPaths;
-use crate::utils::bei_props::{BeiProps, DbProps, MariaDbProps, PhpProps};
+use crate::utils::bei_props::{BeiProps, BunProps, DbProps, MariaDbProps, PhpProps};
 use std::process::{Child, Command};
 
 #[allow(dead_code)]
@@ -109,7 +109,7 @@ pub async fn start_all(
     let php_child = start_php(&config.php, &config.project_config.backend_path, paths)?;
 
     // 3. Bun (frontend)
-    let bun_child = start_bun(&config.project_config.frontend_path, paths)?;
+    let bun_child = start_bun(&config.bun, &config.project_config.frontend_path, paths)?;
 
     let mariadb_pid = mariadb_child.id();
     let php_pid = php_child.id();
@@ -138,7 +138,8 @@ fn start_php(
         std::fs::create_dir_all(&backend_path_buf)?;
     }
     let backend_abs = std::fs::canonicalize(backend_path_buf)?;
-    let backend_clean = std::path::PathBuf::from(backend_abs.to_string_lossy().replace("\\\\?\\", ""));
+    let backend_clean =
+        std::path::PathBuf::from(backend_abs.to_string_lossy().replace("\\\\?\\", ""));
 
     println!("Iniciando PHP em http://localhost:{}", php_config.port);
 
@@ -155,13 +156,18 @@ fn start_php(
     Ok(child)
 }
 
-fn start_bun(frontend_path: &str, paths: &BeiPaths) -> Result<Child, Box<dyn std::error::Error>> {
+fn start_bun(
+    bun_config: &BunProps,
+    frontend_path: &str,
+    paths: &BeiPaths,
+) -> Result<Child, Box<dyn std::error::Error>> {
     let frontend_path_buf = std::path::PathBuf::from(frontend_path);
     if !frontend_path_buf.exists() {
         std::fs::create_dir_all(&frontend_path_buf)?;
     }
     let frontend_abs = std::fs::canonicalize(frontend_path_buf)?;
-    let frontend_clean = std::path::PathBuf::from(frontend_abs.to_string_lossy().replace("\\\\?\\", ""));
+    let frontend_clean =
+        std::path::PathBuf::from(frontend_abs.to_string_lossy().replace("\\\\?\\", ""));
 
     let bun_dir = paths.get_bun_dir("latest");
     let bun_bin = paths
@@ -170,10 +176,16 @@ fn start_bun(frontend_path: &str, paths: &BeiPaths) -> Result<Child, Box<dyn std
 
     println!("Iniciando Bun no frontend...");
 
-    let child = Command::new(bun_bin)
-        .args(["run", "dev"])
-        .current_dir(frontend_clean)
-        .spawn()?;
+    let mut cmd = Command::new(bun_bin);
+    cmd.args(["run", "dev"]);
+
+    if let Some(port) = bun_config.port {
+        cmd.args(["--", "--port", &port.to_string(), "--strictPort"]);
+        println!("Forçando porta {} para o Vite.", port);
+    }
+
+    cmd.current_dir(frontend_clean);
+    let child = cmd.spawn()?;
 
     Ok(child)
 }
@@ -221,9 +233,7 @@ async fn start_mariadb(
         let mut install_cmd = Command::new(install_bin);
         // Evitar caminhos UNC (\\?\) que o canonicalize gera no Windows
         let datadir_str = data_dir_path.to_string_lossy().replace("\\\\?\\", "");
-        install_cmd.args([
-            &format!("--datadir={}", datadir_str),
-        ]);
+        install_cmd.args([&format!("--datadir={}", datadir_str)]);
 
         let status = install_cmd.status()?;
         if !status.success() {
@@ -247,7 +257,7 @@ async fn start_mariadb(
     let mut cmd = Command::new(mariadb_bin);
     let datadir_str = data_dir_path.to_string_lossy().replace("\\\\?\\", "");
     let init_sql_str = init_sql_path.to_string_lossy().replace("\\\\?\\", "");
-    
+
     cmd.args([
         "--port",
         &mariadb_config.port.to_string(),

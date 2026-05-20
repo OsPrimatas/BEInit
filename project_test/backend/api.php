@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Ler a porta do mariadb a partir do bei.cfg.json na raiz do projeto
 $cfgPath = __DIR__ . '/../bei.cfg.json';
-$dbPort = '3306'; // Padrão
+$dbPort = '5002'; // Padrão
 if (file_exists($cfgPath)) {
     $cfg = json_decode(file_get_contents($cfgPath), true);
     if (isset($cfg['mariadb']['port'])) {
@@ -22,7 +22,7 @@ if (file_exists($cfgPath)) {
 $envPath = __DIR__ . '/.env';
 $env = [
     'DB_HOST' => '127.0.0.1',
-    'DB_PORT' => '3306',
+    'DB_PORT' => '5002',
     'DB_USERNAME' => 'root',
     'DB_PASSWORD' => 'admin',
     'DB_DATABASE' => 'bei_db',

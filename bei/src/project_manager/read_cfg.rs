@@ -1,4 +1,4 @@
-use crate::utils::bei_props::{BeiProps, DbConfig, DbProps};
+use crate::utils::bei_props::{BeiProps, DbProps};
 use std::env;
 use std::path::PathBuf;
 
@@ -33,7 +33,7 @@ pub fn load_configs() -> Result<BeiProps, Box<dyn std::error::Error>> {
     Ok(config)
 }
 
-// Carregar credenciais do banco de dados a partir do bei.db.json
+// Carregar credenciais do banco de dados a partir do backend/.env
 pub fn load_db_config() -> Result<DbProps, Box<dyn std::error::Error>> {
     let root = find_project_root()
         .ok_or("Não foi possível encontrar o arquivo bei.cfg.json.\nExecute o comando dentro da raiz do projeto.")?;
@@ -47,21 +47,48 @@ pub fn load_db_config() -> Result<DbProps, Box<dyn std::error::Error>> {
         .as_str()
         .unwrap_or("backend");
 
-    let db_json_path = root.join(backend_path).join("bei.db.json");
+    let env_path = root.join(backend_path).join(".env");
 
-    if !db_json_path.exists() {
+    if !env_path.exists() {
         return Err(format!(
-            "Arquivo bei.db.json não encontrado em {}/. Execute 'bei init' primeiro.",
+            "Arquivo .env não encontrado em {}/. Execute 'bei init' primeiro.",
             backend_path
         )
         .into());
     }
 
-    let db_content = std::fs::read_to_string(&db_json_path)
-        .map_err(|e| format!("Erro ao ler bei.db.json: {}", e))?;
+    let env_content = std::fs::read_to_string(&env_path)
+        .map_err(|e| format!("Erro ao ler o arquivo .env: {}", e))?;
 
-    let db_config: DbConfig = serde_json::from_str(&db_content)
-        .map_err(|e| format!("Erro ao fazer parse do bei.db.json: {}", e))?;
+    let mut user = String::new();
+    let mut password = String::new();
+    let mut database = String::new();
 
-    Ok(db_config.db)
+    for line in env_content.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+
+        if let Some((key, val)) = line.split_once('=') {
+            let key = key.trim();
+            let val = val.trim();
+            match key {
+                "DB_USERNAME" => user = val.to_string(),
+                "DB_PASSWORD" => password = val.to_string(),
+                "DB_DATABASE" => database = val.to_string(),
+                _ => {}
+            }
+        }
+    }
+
+    if user.is_empty() || database.is_empty() {
+        return Err("O arquivo .env não possui as chaves DB_USERNAME e DB_DATABASE necessárias.".into());
+    }
+
+    Ok(DbProps {
+        user,
+        password,
+        database,
+    })
 }

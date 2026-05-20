@@ -3,8 +3,6 @@
 # =====================================
 .DS_Store
 *.local
-.env
-.env.*.local
 .phpunit.result.cache
 .bei
 
@@ -70,4 +68,3 @@ backend/**/logs/*.log
 **/*.temp
 coverage/
 Thumbs.db
-backend/.env

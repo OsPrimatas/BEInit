@@ -1,0 +1,6 @@
+{
+    "name": "bei/backend",
+    "description": "Backend project powered by bei",
+    "type": "project",
+    "require": {}
+}
