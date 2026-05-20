@@ -38,6 +38,6 @@ pub async fn download_composer_if_needed(
         }
     }
 
-    println!("✅ Composer {} instalado com sucesso!", version);
+    println!("Composer {} instalado com sucesso!", version);
     Ok(())
 }

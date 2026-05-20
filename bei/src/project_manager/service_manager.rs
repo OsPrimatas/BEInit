@@ -47,6 +47,7 @@ fn start_php(
         std::fs::create_dir_all(&backend_path_buf)?;
     }
     let backend_abs = std::fs::canonicalize(backend_path_buf)?;
+    let backend_clean = std::path::PathBuf::from(backend_abs.to_string_lossy().replace("\\\\?\\", ""));
 
     println!("Iniciando PHP em http://localhost:{}", php_config.port);
 
@@ -55,9 +56,9 @@ fn start_php(
             "-S",
             &format!("0.0.0.0:{}", php_config.port),
             "-t",
-            backend_abs.to_str().unwrap(),
+            backend_clean.to_str().unwrap(),
         ])
-        .current_dir(backend_abs)
+        .current_dir(backend_clean)
         .spawn()?;
 
     Ok(child)
@@ -69,17 +70,18 @@ fn start_bun(frontend_path: &str, paths: &BeiPaths) -> Result<Child, Box<dyn std
         std::fs::create_dir_all(&frontend_path_buf)?;
     }
     let frontend_abs = std::fs::canonicalize(frontend_path_buf)?;
+    let frontend_clean = std::path::PathBuf::from(frontend_abs.to_string_lossy().replace("\\\\?\\", ""));
 
     let bun_dir = paths.get_bun_dir("latest");
     let bun_bin = paths
         .find_executable(&bun_dir, "bun")
         .unwrap_or_else(|| std::path::PathBuf::from("bun"));
 
-    println!("⚡ Iniciando Bun no frontend...");
+    println!("Iniciando Bun no frontend...");
 
     let child = Command::new(bun_bin)
         .args(["run", "dev"])
-        .current_dir(frontend_abs)
+        .current_dir(frontend_clean)
         .spawn()?;
 
     Ok(child)
@@ -102,7 +104,7 @@ async fn start_mariadb(
         })?;
 
     println!(
-        "🗄️  Iniciando MariaDB v{} na porta {}",
+        "Iniciando MariaDB v{} na porta {}",
         mariadb_config.version, mariadb_config.port
     );
 
@@ -114,7 +116,7 @@ async fn start_mariadb(
 
     let mysql_system_db = data_dir_path.join("mysql");
     if !mysql_system_db.exists() {
-        println!("📦 Inicializando diretório de dados do MariaDB...");
+        println!("Inicializando diretório de dados do MariaDB...");
         let install_bin = paths
             .find_executable(&mariadb_dir, "mariadb-install-db")
             .or_else(|| paths.find_executable(&mariadb_dir, "mysql_install_db"))

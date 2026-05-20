@@ -7,6 +7,7 @@ use crate::download_manager::mariadb_download;
 use crate::download_manager::php_download;
 use crate::project_manager::read_cfg::{load_configs, load_db_config};
 use crate::project_manager::service_manager;
+use crate::project_manager::status;
 use crate::utils::bei_paths::BeiPaths;
 
 #[derive(Parser)]
@@ -120,10 +121,12 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
             println!("");
 
             tokio::signal::ctrl_c().await?;
-            println!("\n⏹️  Recebido Ctrl+C, parando serviços...");
+            println!("\nRecebido Ctrl+C, parando serviços...");
         }
         Commands::Stop => println!("Parando serviços..."),
-        Commands::Status => println!("Status atual..."),
+        Commands::Status => {
+            status::show_status().await?;
+        }
         Commands::Php { args } => {
             let config = load_configs()?;
             let paths = BeiPaths::new();
@@ -131,7 +134,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
             let php_exe = match paths.find_executable(&php_dir, "php") {
                 Some(exe) => exe,
                 None => {
-                    eprintln!("❌ PHP não encontrado. Execute 'bei install' primeiro.");
+                    eprintln!("Erro: PHP não encontrado. Execute 'bei install' primeiro.");
                     std::process::exit(1);
                 }
             };
@@ -145,7 +148,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
             let bun_exe = match paths.find_executable(&bun_dir, "bun") {
                 Some(exe) => exe,
                 None => {
-                    eprintln!("❌ Bun não encontrado. Execute 'bei install' primeiro.");
+                    eprintln!("Erro: Bun não encontrado. Execute 'bei install' primeiro.");
                     std::process::exit(1);
                 }
             };
@@ -159,7 +162,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
             let composer_exe = match paths.find_executable(&composer_dir, "composer") {
                 Some(exe) => exe,
                 None => {
-                    eprintln!("❌ Composer não encontrado. Execute 'bei install' primeiro.");
+                    eprintln!("Erro: Composer não encontrado. Execute 'bei install' primeiro.");
                     std::process::exit(1);
                 }
             };
@@ -185,11 +188,11 @@ fn init_project() -> Result<(), Box<dyn Error>> {
 
     // Se o arquivo cfg_path já existe, lê o que está no arquivo. Caso contrário, cria o default e usa.
     let cfg_content = if std::path::Path::new(cfg_path).exists() {
-        println!("ℹ️  Arquivo bei.cfg.json já existe. Usando configurações existentes.");
+        println!("Arquivo bei.cfg.json já existe. Usando configurações existentes.");
         std::fs::read_to_string(cfg_path)?
     } else {
         std::fs::write(cfg_path, default_cfg)?;
-        println!("✅ Arquivo bei.cfg.json criado!");
+        println!("Arquivo bei.cfg.json criado!");
         default_cfg.to_string()
     };
 
@@ -214,12 +217,12 @@ fn init_project() -> Result<(), Box<dyn Error>> {
     // Criar pastas
     if !std::path::Path::new(frontend_path).exists() {
         std::fs::create_dir_all(frontend_path)?;
-        println!("✅ Pasta {} criada!", frontend_path);
+        println!("Pasta {} criada!", frontend_path);
     }
 
     if !std::path::Path::new(backend_path).exists() {
         std::fs::create_dir_all(backend_path)?;
-        println!("✅ Pasta {} criada!", backend_path);
+        println!("Pasta {} criada!", backend_path);
     }
 
     // .gitignore
@@ -252,7 +255,7 @@ fn init_project() -> Result<(), Box<dyn Error>> {
                 frontend_path, frontend_path, frontend_path, backend_path, env_entry, db_json_entry
             );
             std::fs::write(gitignore_path, gitignore_content)?;
-            println!("✅ Arquivo .gitignore criado!");
+            println!("Arquivo .gitignore criado!");
         } else {
             // Se já existe, garante que .env e bei.db.json estão lá
             let mut content = std::fs::read_to_string(gitignore_path)?;
@@ -275,7 +278,7 @@ fn init_project() -> Result<(), Box<dyn Error>> {
 
             if modified {
                 std::fs::write(gitignore_path, content)?;
-                println!("✅ Arquivo .gitignore atualizado com novas exclusões!");
+                println!("Arquivo .gitignore atualizado com novas exclusões!");
             }
         }
     }
@@ -286,7 +289,7 @@ fn init_project() -> Result<(), Box<dyn Error>> {
         if !std::path::Path::new(&env_path).exists() {
             let default_env_content = "# Variáveis de ambiente do backend\n# Configure suas chaves de API e outras variáveis aqui\n";
             std::fs::write(&env_path, default_env_content)?;
-            println!("✅ Arquivo .env criado em {}/", backend_path);
+            println!("Arquivo .env criado em {}/", backend_path);
         }
     }
 
@@ -294,7 +297,7 @@ fn init_project() -> Result<(), Box<dyn Error>> {
     let db_json_path = format!("{}/bei.db.json", backend_path);
     if !std::path::Path::new(&db_json_path).exists() {
         std::fs::write(&db_json_path, default_db_json)?;
-        println!("✅ Arquivo bei.db.json criado em {}/", backend_path);
+        println!("Arquivo bei.db.json criado em {}/", backend_path);
     }
 
     // composer.json no backend
@@ -308,7 +311,7 @@ fn init_project() -> Result<(), Box<dyn Error>> {
     "require": {}
 }"#;
             std::fs::write(&composer_path, composer_content)?;
-            println!("✅ Arquivo composer.json criado em {}/", backend_path);
+            println!("Arquivo composer.json criado em {}/", backend_path);
         }
     }
 

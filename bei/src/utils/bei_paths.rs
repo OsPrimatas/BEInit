@@ -51,7 +51,7 @@ impl BeiPaths {
 
         if !dir.exists() {
             fs::create_dir_all(&dir)?;
-            println!("📁 Pasta criada: {:?}", dir);
+            println!("Pasta criada: {:?}", dir);
         }
         Ok(dir)
     }
