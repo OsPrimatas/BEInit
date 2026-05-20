@@ -6,20 +6,23 @@ use tokio::net::TcpStream;
 use tokio::time::timeout;
 
 async fn is_port_open(port: u16) -> bool {
-    let addr = format!("127.0.0.1:{}", port);
-    if let Ok(socket_addr) = addr.parse::<std::net::SocketAddr>() {
-        match timeout(
-            Duration::from_millis(300),
-            TcpStream::connect(&socket_addr),
-        )
-        .await
-        {
-            Ok(Ok(_)) => true,
-            _ => false,
+    let addrs = [
+        format!("127.0.0.1:{}", port),
+        format!("[::1]:{}", port),
+    ];
+    
+    for addr_str in addrs {
+        if let Ok(socket_addr) = addr_str.parse::<std::net::SocketAddr>() {
+            if let Ok(Ok(_)) = timeout(
+                Duration::from_millis(300),
+                TcpStream::connect(&socket_addr),
+            ).await {
+                return true;
+            }
         }
-    } else {
-        false
     }
+    
+    false
 }
 
 fn is_pid_running(pid: u32) -> bool {
@@ -195,6 +198,8 @@ pub async fn show_status() -> Result<(), Box<dyn std::error::Error>> {
 
     // 5. Arquivo de Ambiente (.env)
     let env_path = backend_path.join(".env");
+    let mut db_name_from_env = "bei_db".to_string();
+
     if !env_path.exists() {
         print_file_status(
             "Arquivo de Ambiente (backend/.env)",
@@ -211,60 +216,18 @@ pub async fn show_status() -> Result<(), Box<dyn std::error::Error>> {
             "",
             ""
         );
-    }
 
-    // 6. Arquivo bei.db.json com validação de parsing JSON
-    let db_json_path = backend_path.join("bei.db.json");
-    let mut db_ok = false;
-    let mut db_err_msg = String::new();
-    let mut db_config_opt = None;
-
-    if db_json_path.exists() {
-        match std::fs::read_to_string(&db_json_path) {
-            Ok(content) => {
-                match serde_json::from_str::<crate::utils::bei_props::DbConfig>(&content) {
-                    Ok(dbc) => {
-                        db_config_opt = Some(dbc.db);
-                        db_ok = true;
-                    }
-                    Err(e) => {
-                        db_err_msg = format!("Erro ao fazer parse do JSON: {}", e);
+        // Tenta ler o DB_DATABASE para exibir no status
+        if let Ok(content) = std::fs::read_to_string(&env_path) {
+            for line in content.lines() {
+                if let Some((key, val)) = line.split_once('=') {
+                    if key.trim() == "DB_DATABASE" {
+                        db_name_from_env = val.trim().to_string();
+                        break;
                     }
                 }
             }
-            Err(e) => {
-                db_err_msg = format!("Erro ao ler o arquivo: {}", e);
-            }
         }
-    } else {
-        db_err_msg = "Arquivo bei.db.json não foi encontrado.".to_string();
-    }
-
-    let db_exists = db_json_path.exists();
-    if !db_exists {
-        print_file_status(
-            "Configuração do Banco (backend/bei.db.json)",
-            "AUSENTE",
-            &db_err_msg,
-            "O arquivo backend/bei.db.json não existe. O MariaDB necessita dele para saber a senha, nome do banco e usuário a serem inicializados.",
-            "Execute 'bei init' para criar o arquivo com os valores padrão de banco de dados."
-        );
-    } else if !db_ok {
-        print_file_status(
-            "Configuração do Banco (backend/bei.db.json)",
-            "ERRO DE FORMATO",
-            &db_err_msg,
-            "O arquivo backend/bei.db.json está corrompido ou com erros de sintaxe JSON.",
-            "Abra o arquivo backend/bei.db.json e corrija a formatação do JSON (verifique se há vírgulas sobrando ou chaves ausentes)."
-        );
-    } else {
-        print_file_status(
-            "Configuração do Banco (backend/bei.db.json)",
-            "OK",
-            "",
-            "",
-            ""
-        );
     }
 
     println!();
@@ -381,7 +344,7 @@ pub async fn show_status() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // MariaDB
-    let db_name = db_config_opt.as_ref().map(|d| d.database.as_str()).unwrap_or("bei_db");
+    let db_name = db_name_from_env.as_str();
     let mariadb_pid = saved_pids["mariadb"].as_u64().map(|p| p as u32);
     let mariadb_state = analyze_service_state(config.mariadb.port, mariadb_pid).await;
     print_service_state_details(
@@ -391,17 +354,24 @@ pub async fn show_status() -> Result<(), Box<dyn std::error::Error>> {
         &format!("localhost:{} (Banco: {})", config.mariadb.port, db_name)
     );
 
-    // Frontend (Vite/Bun) - Encontrar se alguma das portas 5173..=5175 está aberta
+    // Frontend (Vite/Bun)
     let bun_pid = saved_pids["bun"].as_u64().map(|p| p as u32);
     let mut open_frontend_port = None;
-    for port in 5173..=5175 {
+    
+    if let Some(port) = config.bun.port {
         if is_port_open(port).await {
             open_frontend_port = Some(port);
-            break;
+        }
+    } else {
+        for port in 5173..=5175 {
+            if is_port_open(port).await {
+                open_frontend_port = Some(port);
+                break;
+            }
         }
     }
 
-    let frontend_port_used = open_frontend_port.unwrap_or(5173);
+    let frontend_port_used = open_frontend_port.unwrap_or(config.bun.port.unwrap_or(5173));
     let frontend_state = match (open_frontend_port.is_some(), bun_pid) {
         (true, Some(pid)) => {
             if is_pid_running(pid) {

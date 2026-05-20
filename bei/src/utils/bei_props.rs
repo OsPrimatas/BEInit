@@ -13,11 +13,13 @@ pub struct ProjectConfigProps {
 #[derive(Debug, Deserialize)]
 pub struct BunProps {
     pub version: String,
+    pub port: Option<u16>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ComposerProps {
     pub version: String,
+    pub port: Option<u16>,
 }
 
 /// Configurações do bei
@@ -46,16 +48,10 @@ pub struct MariaDbProps {
     pub data_dir: String,
 }
 
-/// Credenciais do banco de dados (lidas do bei.db.json)
-#[derive(Debug, Deserialize, Clone)]
+/// Credenciais do banco de dados (lidas do backend/.env)
+#[derive(Debug, Clone)]
 pub struct DbProps {
     pub user: String,
     pub password: String,
     pub database: String,
-}
-
-/// Wrapper para o bei.db.json (campo raiz "db")
-#[derive(Debug, Deserialize)]
-pub struct DbConfig {
-    pub db: DbProps,
 }

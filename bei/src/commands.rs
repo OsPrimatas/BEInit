@@ -186,7 +186,6 @@ fn init_project() -> Result<(), Box<dyn Error>> {
 
     // Ler os templates embutidos
     let default_cfg = include_str!("../assets/bei.cfg.json");
-    let default_db_json = include_str!("../assets/bei.db.json");
 
     // Se o arquivo cfg_path já existe, lê o que está no arquivo. Caso contrário, cria o default e usa.
     let cfg_content = if std::path::Path::new(cfg_path).exists() {
@@ -231,7 +230,6 @@ fn init_project() -> Result<(), Box<dyn Error>> {
     if add_gitignore {
         let gitignore_path = ".gitignore";
         let env_entry = format!("{}/.env", backend_path);
-        let db_json_entry = format!("{}/bei.db.json", backend_path);
 
         if !std::path::Path::new(gitignore_path).exists() {
             let gitignore_content = format!(
@@ -252,14 +250,13 @@ fn init_project() -> Result<(), Box<dyn Error>> {
 # bei e Dados Locais
 .bei/
 {}
-{}
 "#,
-                frontend_path, frontend_path, frontend_path, backend_path, env_entry, db_json_entry
+                frontend_path, frontend_path, frontend_path, backend_path, env_entry
             );
             std::fs::write(gitignore_path, gitignore_content)?;
             println!("Arquivo .gitignore criado!");
         } else {
-            // Se já existe, garante que .env e bei.db.json estão lá
+            // Se já existe, garante que .env está no gitignore
             let mut content = std::fs::read_to_string(gitignore_path)?;
             let mut modified = false;
 
@@ -270,13 +267,6 @@ fn init_project() -> Result<(), Box<dyn Error>> {
                 content.push_str(&format!("{}\n", env_entry));
                 modified = true;
             }
-            if !content.contains(&db_json_entry) {
-                if !content.ends_with('\n') {
-                    content.push('\n');
-                }
-                content.push_str(&format!("{}\n", db_json_entry));
-                modified = true;
-            }
 
             if modified {
                 std::fs::write(gitignore_path, content)?;
@@ -285,21 +275,25 @@ fn init_project() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    // .env no backend (arquivo genérico de variáveis de ambiente)
+    // .env no backend (Variáveis de ambiente do backend e banco de dados)
     if add_env {
         let env_path = format!("{}/.env", backend_path);
         if !std::path::Path::new(&env_path).exists() {
-            let default_env_content = "# Variáveis de ambiente do backend\n# Configure suas chaves de API e outras variáveis aqui\n";
+            let default_env_content = r#"# Variáveis de ambiente do backend
+APP_ENV=local
+APP_DEBUG=true
+
+# Credenciais do Banco de Dados
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=bei_db
+DB_USERNAME=root
+DB_PASSWORD=admin
+"#;
             std::fs::write(&env_path, default_env_content)?;
             println!("Arquivo .env criado em {}/", backend_path);
         }
-    }
-
-    // bei.db.json no backend (credenciais do banco de dados) - sempre criado junto do composer.json
-    let db_json_path = format!("{}/bei.db.json", backend_path);
-    if !std::path::Path::new(&db_json_path).exists() {
-        std::fs::write(&db_json_path, default_db_json)?;
-        println!("Arquivo bei.db.json criado em {}/", backend_path);
     }
 
     // composer.json no backend
