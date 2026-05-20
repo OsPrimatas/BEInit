@@ -123,7 +123,9 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
             tokio::signal::ctrl_c().await?;
             println!("\nRecebido Ctrl+C, parando serviços...");
         }
-        Commands::Stop => println!("Parando serviços..."),
+        Commands::Stop => {
+            service_manager::stop_services()?;
+        }
         Commands::Status => {
             status::show_status().await?;
         }

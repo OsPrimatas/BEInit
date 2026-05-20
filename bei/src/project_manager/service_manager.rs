@@ -1,3 +1,4 @@
+use crate::project_manager::read_cfg::find_project_root;
 use crate::utils::bei_paths::BeiPaths;
 use crate::utils::bei_props::{BeiProps, DbProps, MariaDbProps, PhpProps};
 use std::process::{Child, Command};
@@ -7,6 +8,91 @@ pub struct RunningServices {
     pub mariadb: Option<Child>,
     pub php: Option<Child>,
     pub bun: Option<Child>,
+}
+
+impl Drop for RunningServices {
+    fn drop(&mut self) {
+        println!("Parando serviços...");
+        if let Some(mut child) = self.mariadb.take() {
+            let _ = child.kill();
+        }
+        if let Some(mut child) = self.php.take() {
+            let _ = child.kill();
+        }
+        if let Some(mut child) = self.bun.take() {
+            let _ = child.kill();
+        }
+        clear_pids_file();
+    }
+}
+
+fn save_pids(mariadb_pid: u32, php_pid: u32, bun_pid: u32) {
+    if let Some(root) = find_project_root() {
+        let bei_dir = root.join(".bei");
+        if !bei_dir.exists() {
+            let _ = std::fs::create_dir_all(&bei_dir);
+        }
+        let pids_file = bei_dir.join("pids.json");
+        let content = format!(
+            "{{\n  \"mariadb\": {},\n  \"php\": {},\n  \"bun\": {}\n}}",
+            mariadb_pid, php_pid, bun_pid
+        );
+        let _ = std::fs::write(pids_file, content);
+    }
+}
+
+fn clear_pids_file() {
+    if let Some(root) = find_project_root() {
+        let pids_file = root.join(".bei").join("pids.json");
+        if pids_file.exists() {
+            let _ = std::fs::remove_file(pids_file);
+        }
+    }
+}
+
+pub fn stop_services() -> Result<(), Box<dyn std::error::Error>> {
+    let root = match find_project_root() {
+        Some(r) => r,
+        None => {
+            return Err("Nenhum projeto bei detectado nesta pasta.".into());
+        }
+    };
+
+    let pids_file = root.join(".bei").join("pids.json");
+    if !pids_file.exists() {
+        println!("Nenhum serviço bei ativo registrado.");
+        return Ok(());
+    }
+
+    let content = std::fs::read_to_string(&pids_file)?;
+    let pids: serde_json::Value = serde_json::from_str(&content)?;
+
+    let tools = ["mariadb", "php", "bun"];
+    for tool in &tools {
+        if let Some(pid) = pids[tool].as_u64() {
+            println!("Finalizando processo {} (PID: {})...", tool, pid);
+            kill_process(pid as u32);
+        }
+    }
+
+    let _ = std::fs::remove_file(pids_file);
+    println!("Serviços parados com sucesso.");
+    Ok(())
+}
+
+fn kill_process(pid: u32) {
+    #[cfg(target_os = "windows")]
+    {
+        let _ = std::process::Command::new("taskkill")
+            .args(["/F", "/PID", &pid.to_string()])
+            .output();
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = std::process::Command::new("kill")
+            .args(["-9", &pid.to_string()])
+            .output();
+    }
 }
 
 pub async fn start_all(
@@ -24,6 +110,11 @@ pub async fn start_all(
 
     // 3. Bun (frontend)
     let bun_child = start_bun(&config.project_config.frontend_path, paths)?;
+
+    let mariadb_pid = mariadb_child.id();
+    let php_pid = php_child.id();
+    let bun_pid = bun_child.id();
+    save_pids(mariadb_pid, php_pid, bun_pid);
 
     Ok(RunningServices {
         mariadb: Some(mariadb_child),
